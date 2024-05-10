@@ -5,8 +5,17 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
 )
 
+class OrderedGroup(click.Group):
+    def __init__(self, name=None, commands=None, **attrs):
+        super(OrderedGroup, self).__init__(name, commands, **attrs)
+        #: the registered subcommands by their exported names.
+        self.commands = commands or dict()
 
-@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+    def list_commands(self, ctx):
+        return self.commands
+
+
+@click.group(cls=OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]})
 def fritz():
     """Collection of some useful commands for the FritzBox"""
     pass
