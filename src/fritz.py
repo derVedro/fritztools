@@ -6,20 +6,26 @@ from fritzconnection.core.exceptions import (
 )
 
 
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+def fritz():
+    """Collection of some useful commands for the FritzBox"""
+    pass
+
+
 def _get_connection():
     try:
         return FritzConnection(address="http://fritz.box", use_cache=True)
-    except FritzConnectionException:
-        click.echo("Could not connect to FritzBox")
-        exit(1)
     except FritzAuthorizationError:
         click.echo(
             "Failed Authorization. Check your $FRITZ_PASSWORD environment variable"
         )
         exit(1)
+    except FritzConnectionException:
+        click.echo("Could not connect to FritzBox")
+        exit(1)
 
 
-def _get_hostadress():
+def _get_hostaddress():
     import socket
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -39,25 +45,23 @@ def _get_portmapping():
     mappings_amount = fc.call_action(
         "WANPPPConnection1", "GetPortMappingNumberOfEntries"
     ).get("NewPortMappingNumberOfEntries", 0)
-
     return [
         fc.call_action(
-            "WANPPPConnection1",
-            "GetGenericPortMappingEntry",
+            service_name="WANPPPConnection1",
+            action_name="GetGenericPortMappingEntry",
             arguments={"NewPortMappingIndex": portmapping_number},
         )
         for portmapping_number in range(mappings_amount)
     ]
 
 
-def _add_port_mapping(port, udp=False, enabled=True, **kwargs):
+def _add_port_mapping(port, protocol="TCP", enabled=True, **kwargs):
     fc = _get_connection()
-    protocol = "UDP" if udp else "TCP"
     name = kwargs.get("name", "")
     description = (
-        f'{_get_hostname()}-{port}{"-udp" if udp else ""}' if not name else name
+        f'{_get_hostname()}-{port}{"-udp" if protocol else ""}' if not name else name
     )
-    client = _get_hostadress()
+    client = _get_hostaddress()
 
     args = {
         "NewRemoteHost": "0.0.0.0",
@@ -69,45 +73,47 @@ def _add_port_mapping(port, udp=False, enabled=True, **kwargs):
         "NewPortMappingDescription": description,
         "NewLeaseDuration": 0,
     }
-    fc.call_action("WANPPPConnection1", "AddPortMapping", arguments=args)
+    fc.call_action(
+        service_name="WANPPPConnection1", action_name="AddPortMapping", arguments=args
+    )
 
 
-@click.group()
-def cli():
-    pass
-
-
-@cli.command()
+@fritz.command()
 @click.argument("port", type=int)
-@click.option("--udp", is_flag=True, default=False)
-@click.option("--name", type=str, default="")
-def openport(port, udp, name):
-    _add_port_mapping(port, udp, name=name)
+@click.option("--udp", "protocol", flag_value="UDP", help="use UDP instead of TCP")
+@click.option("--tcp", "protocol", flag_value="TCP", default=True)
+@click.option("--name", type=str, default="", help="name for the rule")
+def openport(port, protocol, name):
+    """Creates a PORT forwarding."""
+    _add_port_mapping(port, protocol, name=name)
 
 
-@cli.command()
+@fritz.command()
 @click.argument("port", type=int)
-@click.option("--udp", is_flag=True, default=False)
+@click.option("--udp", "protocol", flag_value="UDP", help="use UDP instead of TCP")
+@click.option("--tcp", "protocol", flag_value="TCP", default=True)
 @click.option("--name", type=str, default="")
-def closeport(port, udp, name):
+def closeport(port, protocol, name):
+    """Disables forwarding of the PORT."""
     # may be forwarding is already known and disabled? reuse the name!
     if not name:
-        client = _get_hostadress()
+        client = _get_hostaddress()
         for pm in _get_portmapping():
             if pm["NewInternalClient"] != client:
                 continue
             if (
                 pm["NewExternalPort"] == port
-                and pm["NewProtocol"]
+                and pm["NewProtocol"] == protocol
                 and pm["NewInternalPort"] == port
             ):
                 name = pm["NewPortMappingDescription"]
                 break
-    _add_port_mapping(port, udp, name=name, enabled=False)
+    _add_port_mapping(port, protocol, name=name, enabled=False)
 
 
-@cli.command()
+@fritz.command()
 def listopen():
+    """Lists all port forwardings."""
     for pm in _get_portmapping():
         click.echo(
             f' [{"X" if pm["NewEnabled"] else " "}] '
@@ -117,21 +123,25 @@ def listopen():
         )
 
 
-@cli.command()
+@fritz.command()
 def myip():
+    """Shows the current IP address."""
     fc = _get_connection()
-    out = fc.call_action("WANPPPConnection1", "GetExternalIPAddress")
-    print(out["NewExternalIPAddress"])
+    res = fc.call_action(
+        service_name="WANPPPConnection1", action_name="GetExternalIPAddress"
+    )
+    click.echo(res["NewExternalIPAddress"])
 
 
-@cli.command()
+@fritz.command()
 def reconnect():
+    """Terminates the FritzBox connection."""
     fc = _get_connection()
     try:
-        fc.call_action("WANPPPConnection1", "ForceTermination")
+        fc.call_action(service_name="WANPPPConnection1", action_name="ForceTermination")
     except FritzConnectionException:
         pass
 
 
 if __name__ == "__main__":
-    cli()
+    fritz()
