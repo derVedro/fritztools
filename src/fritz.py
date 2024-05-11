@@ -18,16 +18,20 @@ def fritz():
 
 
 def _get_connection():
-    try:
-        return FritzConnection(address="http://fritz.box", use_cache=True)
-    except FritzAuthorizationError:
-        click.echo(
-            "Failed Authorization. Check your $FRITZ_PASSWORD environment variable"
-        )
-        exit(1)
-    except FritzConnectionException:
-        click.echo("Could not connect to FritzBox")
-        exit(1)
+    global _fritz_connection
+    if "_fritz_connection" not in globals():
+        try:
+            _fritz_connection = FritzConnection(address="http://fritz.box", use_cache=True)
+        except FritzAuthorizationError:
+            click.echo(
+                "Failed Authorization. Check your $FRITZ_PASSWORD environment variable"
+            )
+            exit(1)
+        except FritzConnectionException:
+            click.echo("Could not connect to FritzBox")
+            exit(1)
+
+    return _fritz_connection
 
 
 def _get_hostaddress():
@@ -104,15 +108,14 @@ def closeport(port, protocol, name):
     if not name:
         client = _get_hostaddress()
         for pm in _get_portmapping():
-            if pm["NewInternalClient"] != client:
-                continue
-            if (
-                pm["NewExternalPort"] == port
+            if (pm["NewInternalClient"] == client
+                and pm["NewExternalPort"] == port
                 and pm["NewProtocol"] == protocol
                 and pm["NewInternalPort"] == port
             ):
                 name = pm["NewPortMappingDescription"]
                 break
+
     _add_port_mapping(port, protocol, name=name, enabled=False)
 
 
