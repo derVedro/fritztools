@@ -5,6 +5,7 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
 )
 
+__version__ = "0.1"
 
 class OrderedGroup(click.Group):
     def list_commands(self, ctx):
@@ -12,6 +13,7 @@ class OrderedGroup(click.Group):
 
 
 @click.group(cls=OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]})
+@click.version_option(__version__)
 def fritz():
     """Collection of some useful commands for the FritzBox"""
     pass
