@@ -5,7 +5,8 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
 )
 
-__version__ = "0.1"
+__version__ = "0.0"
+
 
 class OrderedGroup(click.Group):
     def list_commands(self, ctx):
@@ -23,14 +24,21 @@ def _get_connection():
     global _fritz_connection
     if "_fritz_connection" not in globals():
         try:
-            _fritz_connection = FritzConnection(address="http://fritz.box", use_cache=True)
+            _fritz_connection = FritzConnection(
+                address="http://fritz.box", use_cache=True
+            )
+            # have to do it here, otherwise auth errors must be catched later in different places
+            _fritz_connection.call_action(
+                service_name="WANPPPConnection1",
+                action_name="GetExternalIPAddress"
+            )
         except FritzAuthorizationError:
             click.echo(
-                "Failed Authorization. Check your $FRITZ_PASSWORD environment variable"
+                "Failed Authorization. Check your $FRITZ_PASSWORD environment variable."
             )
             exit(1)
         except FritzConnectionException:
-            click.echo("Could not connect to FritzBox")
+            click.echo("Could not connect to FritzBox.")
             exit(1)
 
     return _fritz_connection
@@ -73,7 +81,6 @@ def _add_port_mapping(port, protocol="TCP", enabled=True, **kwargs):
         f'{_get_hostname()}-{port}{"-udp" if protocol else ""}' if not name else name
     )
     client = _get_hostaddress()
-
     args = {
         "NewRemoteHost": "0.0.0.0",
         "NewExternalPort": port,
@@ -106,11 +113,12 @@ def openport(port, protocol, name):
 @click.option("--name", type=str, default="")
 def closeport(port, protocol, name):
     """Disables forwarding of the PORT."""
-    # may be forwarding is already known and disabled? reuse the name!
+    # maybe forwarding is already known? reuse the name!
     if not name:
         client = _get_hostaddress()
         for pm in _get_portmapping():
-            if (pm["NewInternalClient"] == client
+            if (
+                pm["NewInternalClient"] == client
                 and pm["NewExternalPort"] == port
                 and pm["NewProtocol"] == protocol
                 and pm["NewInternalPort"] == port
