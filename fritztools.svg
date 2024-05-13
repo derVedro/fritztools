@@ -30,7 +30,7 @@
   <path fill="url(#boxy-body-3)" d="M 12 5 L 13 5 L 13 6 L 12 6 L 12 5 Z"/>
   <path fill="url(#boxy-body-3)" d="M 12 7 L 13 7 L 13 8 L 12 8 L 12 7 Z"/>
   <path fill="url(#light-on)" d="M 2 4 L 5 4 L 5 5 L 2 5 L 2 4 Z"/>
-  <path fill="url(#light-on)" d="M 2 6 L 5 6 L 5 7 L 2 7 L 2 6 Z"/>
+  <path fill="url(#light-off)" d="M 2 6 L 5 6 L 5 7 L 2 7 L 2 6 Z"/>
   <path fill="url(#light-off)" d="M 2 8 L 5 8 L 5 9 L 2 9 L 2 8 Z"/>
   <path fill="url(#light-on)" d="M 2 10 L 5 10 L 5 11 L 2 11 L 2 10 Z"/>
   <path fill="url(#light-off)" d="M 2 12 L 5 12 L 5 13 L 2 13 L 2 12 Z"/>
