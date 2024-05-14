@@ -9,7 +9,7 @@ dynamic = ["version", "description"]
 readme = "README.md"
 
 [project.scripts]
-fritz = "fritz:fritz"
+fritz = "fritztools.fritz:fritz"
 
 [build-system]
 requires = ["flit_core<4"]
