@@ -77,12 +77,26 @@ def _get_portmapping():
     ]
 
 
-def _add_port_mapping(port, protocol="TCP", enabled=True, **kwargs):
+def _get_suitable_name(port, protocol):
+    client = _get_hostaddress()
+    # maybe forwarding is already known? reuse the name!
+    for pm in _get_portmapping():
+        if (
+            pm["NewInternalClient"] == client
+            and pm["NewProtocol"] == protocol
+            and pm["NewExternalPort"] == port
+            and pm["NewInternalPort"] == port
+        ):
+            name = pm["NewPortMappingDescription"]
+            break
+    else:
+        name = f"{_get_hostname()}-{port}-{protocol.lower()}"
+    return name
+
+
+def _add_port_mapping(port, protocol="TCP", enabled=True, name=""):
     fc = _get_connection()
-    name = kwargs.get("name", "")
-    description = (
-        f'{_get_hostname()}-{port}{"-udp" if protocol else ""}' if not name else name
-    )
+    description = name if name != "" else _get_suitable_name(port, protocol)
     client = _get_hostaddress()
     args = {
         "NewRemoteHost": "0.0.0.0",
@@ -132,19 +146,6 @@ def openport(port, protocol, name):
 @click.option("--name", type=str, default="")
 def closeport(port, protocol, name):
     """Disables forwarding of the PORT."""
-    # maybe forwarding is already known? reuse the name!
-    if not name:
-        client = _get_hostaddress()
-        for pm in _get_portmapping():
-            if (
-                pm["NewInternalClient"] == client
-                and pm["NewExternalPort"] == port
-                and pm["NewProtocol"] == protocol
-                and pm["NewInternalPort"] == port
-            ):
-                name = pm["NewPortMappingDescription"]
-                break
-
     _add_port_mapping(port, protocol, name=name, enabled=False)
 
 
@@ -154,7 +155,7 @@ def listopen():
     for pm in _get_portmapping():
         click.echo(
             f' [{"X" if pm["NewEnabled"] else " "}] '
-            f'{pm["NewPortMappingDescription"]:<10.10} {pm["NewProtocol"]} '
+            f'{pm["NewPortMappingDescription"]:<15.15} {pm["NewProtocol"]} '
             f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]} -> '
             f'{pm["NewInternalClient"]}:{pm["NewInternalPort"]}'
         )
