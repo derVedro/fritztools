@@ -1,4 +1,5 @@
 """Collection of some useful commands for the FritzBox"""
+
 import click
 from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import (
@@ -14,7 +15,9 @@ class __OrderedGroup(click.Group):
         return self.commands
 
 
-@click.group(cls=__OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]})
+@click.group(
+    cls=__OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]}
+)
 @click.version_option(__version__)
 def fritz():
     """Collection of some useful commands for the FritzBox"""
@@ -30,8 +33,7 @@ def _get_connection():
             )
             # have to do it here, otherwise auth errors must be catched later in different places
             _fritz_connection.call_action(
-                service_name="WANPPPConnection1",
-                action_name="GetExternalIPAddress"
+                service_name="WANPPPConnection1", action_name="GetExternalIPAddress"
             )
         except FritzAuthorizationError:
             click.echo(
@@ -97,6 +99,22 @@ def _add_port_mapping(port, protocol="TCP", enabled=True, **kwargs):
     )
 
 
+def _get_myip():
+    fc = _get_connection()
+    res = fc.call_action(
+        service_name="WANPPPConnection1", action_name="GetExternalIPAddress"
+    )
+    return res["NewExternalIPAddress"]
+
+
+def _terminate():
+    fc = _get_connection()
+    try:
+        fc.call_action(service_name="WANPPPConnection1", action_name="ForceTermination")
+    except FritzConnectionException:
+        pass
+
+
 @fritz.command()
 @click.argument("port", type=int)
 @click.option("--udp", "protocol", flag_value="UDP", help="use UDP instead of TCP")
@@ -143,23 +161,34 @@ def listopen():
 
 
 @fritz.command()
-def myip():
-    """Shows the current IP address."""
+@click.option("--newip", "insistent", is_flag=True, default=False)
+def reconnect(insistent=False, attempts=5, attempt_delay=5):
+    """Terminates the FritzBox connection."""
     fc = _get_connection()
-    res = fc.call_action(
-        service_name="WANPPPConnection1", action_name="GetExternalIPAddress"
-    )
-    click.echo(res["NewExternalIPAddress"])
+
+    if not insistent:
+        _terminate()
+    else:
+        import time, os
+
+        old_ip = _get_myip()
+        for attempt in range(attempts):
+            click.echo(f"\r{attempt+1} attempt to get a new IP", nl=False)
+            _terminate()
+            time.sleep(attempt_delay)
+            new_ip = _get_myip()
+            if new_ip != old_ip:
+                click.echo(f"{os.linesep}new IP: {new_ip}")
+                break
+        else:
+            click.echo(f"{os.linesep}could not get a new IP")
+            exit(-1)
 
 
 @fritz.command()
-def reconnect():
-    """Terminates the FritzBox connection."""
-    fc = _get_connection()
-    try:
-        fc.call_action(service_name="WANPPPConnection1", action_name="ForceTermination")
-    except FritzConnectionException:
-        pass
+def myip():
+    """Shows the current IP address."""
+    click.echo(_get_myip())
 
 
 if __name__ == "__main__":
