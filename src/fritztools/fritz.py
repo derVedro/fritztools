@@ -24,6 +24,12 @@ def fritz():
     pass
 
 
+@fritz.group(cls=__OrderedGroup)
+def port():
+    """Do port forwarding"""
+    pass
+
+
 def _get_connection():
     global _fritz_connection
     if "_fritz_connection" not in globals():
@@ -129,28 +135,28 @@ def _terminate():
         pass
 
 
-@fritz.command()
+@port.command(name="open")
 @click.argument("port", type=int)
 @click.option("--udp", "protocol", flag_value="UDP", help="use UDP instead of TCP")
 @click.option("--tcp", "protocol", flag_value="TCP", default=True)
 @click.option("--name", type=str, default="", help="name for the rule")
-def openport(port, protocol, name):
+def port_open(port, protocol, name):
     """Creates a PORT forwarding."""
     _add_port_mapping(port, protocol, name=name)
 
 
-@fritz.command()
+@port.command(name="close")
 @click.argument("port", type=int)
 @click.option("--udp", "protocol", flag_value="UDP", help="use UDP instead of TCP")
 @click.option("--tcp", "protocol", flag_value="TCP", default=True)
 @click.option("--name", type=str, default="")
-def closeport(port, protocol, name):
+def port_close(port, protocol, name):
     """Disables forwarding of the PORT."""
     _add_port_mapping(port, protocol, name=name, enabled=False)
 
 
-@fritz.command()
-def listopen():
+@port.command(name="list")
+def port_list():
     """Lists all port forwardings."""
     for pm in _get_portmapping():
         click.echo(
