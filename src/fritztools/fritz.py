@@ -5,6 +5,7 @@ from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import (
     FritzConnectionException,
     FritzAuthorizationError,
+    FritzServiceError,
 )
 
 __version__ = "0.1"
@@ -53,6 +54,15 @@ def _get_connection():
     return _fritz_connection
 
 
+def _call(service_name, action_name, arguments=None):
+    if arguments is None:
+        arguments = dict()
+    fc = _get_connection()
+    return fc.call_action(
+        service_name=service_name, action_name=action_name, arguments=arguments
+    )
+
+
 def _get_hostaddress():
     import socket
 
@@ -69,12 +79,11 @@ def _get_hostname():
 
 
 def _get_portmapping():
-    fc = _get_connection()
-    mappings_amount = fc.call_action(
-        "WANPPPConnection1", "GetPortMappingNumberOfEntries"
-    ).get("NewPortMappingNumberOfEntries", 0)
+    mappings_amount = _call("WANPPPConnection1", "GetPortMappingNumberOfEntries").get(
+        "NewPortMappingNumberOfEntries", 0
+    )
     return [
-        fc.call_action(
+        _call(
             service_name="WANPPPConnection1",
             action_name="GetGenericPortMappingEntry",
             arguments={"NewPortMappingIndex": portmapping_number},
@@ -101,7 +110,6 @@ def _get_suitable_name(port, protocol):
 
 
 def _add_port_mapping(port, protocol="TCP", enabled=True, name=""):
-    fc = _get_connection()
     description = name if name != "" else _get_suitable_name(port, protocol)
     client = _get_hostaddress()
     args = {
@@ -114,23 +122,19 @@ def _add_port_mapping(port, protocol="TCP", enabled=True, name=""):
         "NewPortMappingDescription": description,
         "NewLeaseDuration": 0,
     }
-    fc.call_action(
+    _call(
         service_name="WANPPPConnection1", action_name="AddPortMapping", arguments=args
     )
 
 
 def _get_myip():
-    fc = _get_connection()
-    res = fc.call_action(
-        service_name="WANPPPConnection1", action_name="GetExternalIPAddress"
-    )
+    res = _call(service_name="WANPPPConnection1", action_name="GetExternalIPAddress")
     return res["NewExternalIPAddress"]
 
 
 def _terminate():
-    fc = _get_connection()
     try:
-        fc.call_action(service_name="WANPPPConnection1", action_name="ForceTermination")
+        _call(service_name="WANPPPConnection1", action_name="ForceTermination")
     except FritzConnectionException:
         pass
 
