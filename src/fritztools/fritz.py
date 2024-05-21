@@ -8,7 +8,22 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 
-__version__ = "0.1.dev"
+__version__ = "0.1.dev.wifi"
+
+
+class __Consts:
+    WIFI_NAMES = {
+        1: "2.4 GHz",
+        2: "5 GHz",
+        3: "guests",
+    }
+
+    FREQ_STR = {
+        "2400": "2.4GHz",
+        "5000": "5GHz",
+        "6000": "6GHz",
+        "unknown": "-",
+    }
 
 
 class __OrderedGroup(click.Group):
@@ -28,6 +43,12 @@ def fritz():
 @fritz.group(cls=__OrderedGroup)
 def port():
     """Do port forwarding"""
+    pass
+
+
+@fritz.group(cls=__OrderedGroup)
+def wlan():
+    """Do WLAN stuff"""
     pass
 
 
@@ -72,10 +93,16 @@ def _get_hostaddress():
         return s.getsockname()[0]
 
 
-def _get_hostname():
-    import os
+def _get_hostname(mac_address=None):
+    if mac_address is None:
+        import os
 
-    return os.uname()[1]
+        return os.uname()[1]
+    return _call(
+        service_name="Hosts1",
+        action_name="GetSpecificHostEntry",
+        arguments={"NewMACAddress": mac_address},
+    )["NewHostName"]
 
 
 def _get_portmapping():
@@ -198,6 +225,53 @@ def reconnect(insistent=False, attempts=5, attempt_delay=5):
 def myip():
     """Shows the current IP address."""
     click.echo(_get_myip())
+
+
+@wlan.command(name="list")
+def wlan_list():
+    """List all wifis and their stats"""
+    for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
+        try:
+            res = _call(
+                service_name=f"WLANConfiguration{wlan_number}", action_name="GetInfo"
+            )
+            click.echo(
+                f" {wlan_name:>12}"
+                f" [{"X" if res["NewStatus"] == "Up" else " "}] "
+                f" {res["NewSSID"]:<15.15} {res["NewChannel"]:4} "
+                f"  {__Consts.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]:>6}"
+            )
+        except FritzServiceError:
+            break
+
+
+@wlan.command(name="devices")
+def wlan_listdevice():
+    """List all wifi connected devices."""
+    for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
+        try:
+            res = _call(
+                service_name=f"WLANConfiguration{wlan_number}",
+                action_name="GetTotalAssociations",
+            )
+            for i in range(res["NewTotalAssociations"]):
+                res = _call(
+                    service_name=f"WLANConfiguration{wlan_number}",
+                    action_name="GetGenericAssociatedDeviceInfo",
+                    arguments={"NewAssociatedDeviceIndex": i},
+                )
+
+                print(
+                    f" {_get_hostname(res["NewAssociatedDeviceMACAddress"]):>12} "
+                    f" {res["NewAssociatedDeviceMACAddress"]} "
+                    f" {res["NewAssociatedDeviceIPAddress"]} "
+                    f" {res["NewX_AVM-DE_Speed"]} "
+                    f" {res["NewX_AVM-DE_SignalStrength"]}"
+                )
+
+                # print(*res.items(), sep="\n")
+        except FritzServiceError:
+            break
 
 
 if __name__ == "__main__":
