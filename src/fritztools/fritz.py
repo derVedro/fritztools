@@ -8,7 +8,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 
-__version__ = "0.1"
+__version__ = "0.1.dev"
 
 
 class __OrderedGroup(click.Group):
@@ -175,8 +175,6 @@ def port_list():
 @click.option("--newip", "insistent", is_flag=True, default=False)
 def reconnect(insistent=False, attempts=5, attempt_delay=5):
     """Terminates the FritzBox connection."""
-    fc = _get_connection()
-
     if not insistent:
         _terminate()
     else:
