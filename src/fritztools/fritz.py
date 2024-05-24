@@ -8,7 +8,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 
-__version__ = "0.1.dev.wifi"
+__version__ = "0.2.dev"
 
 
 class __Consts:
@@ -119,9 +119,9 @@ def _get_hostname(mac_address=None):
 
 
 def _get_portmapping():
-    mappings_amount = _call("WANPPPConnection1", "GetPortMappingNumberOfEntries").get(
-        "NewPortMappingNumberOfEntries", 0
-    )
+    mappings_amount = _call(
+        service_name="WANPPPConnection1", action_name="GetPortMappingNumberOfEntries"
+    ).get("NewPortMappingNumberOfEntries", 0)
     return [
         _call(
             service_name="WANPPPConnection1",
@@ -267,7 +267,7 @@ def wlan_off(wlans):
 def _wlan_on_off(names, activate):
     # the default fall if names was empty
     if not names:
-        names = ['1','2'] if activate else ["all"]  #TODO: hard coded values :(
+        names = ["1", "2"] if activate else ["all"]  # TODO: hard coded values :(
     wlan_nums, unknown_names = [], []
     for wlan_name in names:
         try:
@@ -322,7 +322,7 @@ def wlan_listdevice():
                     arguments={"NewAssociatedDeviceIndex": i},
                 )
 
-                print(
+                click.echo(
                     f" {_get_hostname(res["NewAssociatedDeviceMACAddress"]):>12} "
                     f" {res["NewAssociatedDeviceMACAddress"]} "
                     f" {res["NewAssociatedDeviceIPAddress"]} "
@@ -337,4 +337,3 @@ def wlan_listdevice():
 
 if __name__ == "__main__":
     fritz()
-
