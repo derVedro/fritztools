@@ -3,9 +3,8 @@
 fritztools is a small collection of CLI-goodies for your FritzBox 
 
 ## Features
-* open ports
-* close ports
-* list all port forwardings
+* open, close and list ports forwardings
+* turn on/off FritzBox wi-fi, list connected devices
 * show public IP address
 * reconnect
 
@@ -26,7 +25,7 @@ export FRITZ_PASSWORD=your_password
 Then you can use fritztools on your shell with `fritz` command. A simple example of how to figure out all port forwardings on your FritzBox would look like this:  
 
 ```
-fritz listopen
+fritz port list
 ```
 
 For all the others commands just use the build-in `--help` argument.
