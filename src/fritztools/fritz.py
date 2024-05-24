@@ -61,7 +61,7 @@ def port():
 
 @fritz.group(cls=__OrderedGroup)
 def wlan():
-    """Do WLAN stuff"""
+    """Do wi-fi stuff"""
     pass
 
 
@@ -241,7 +241,7 @@ def myip():
     click.echo(_get_myip())
 
 
-def __split_commas_in_params_callback(ctx, param, values):
+def __split_params_commas_callback(ctx, param, values):
     # get rid of possible commas
     params = []
     for maybe_with_comma in values:
@@ -251,20 +251,23 @@ def __split_commas_in_params_callback(ctx, param, values):
 
 
 @wlan.command(name="on")
-@click.argument("wlans", nargs=-1, callback=__split_commas_in_params_callback)
+@click.argument("wlans", nargs=-1, callback=__split_params_commas_callback)
 def wlan_on(wlans):
-    """Turns on wi-fi connections."""
+    """Turn on wi-fi network."""
     _wlan_on_off(names=wlans, activate=True)
 
 
 @wlan.command(name="off")
-@click.argument("wlans", nargs=-1, callback=__split_commas_in_params_callback)
+@click.argument("wlans", nargs=-1, callback=__split_params_commas_callback)
 def wlan_off(wlans):
-    """Turns off wi-fi connections."""
+    """Turn off wi-fi network."""
     _wlan_on_off(names=wlans, activate=False)
 
 
 def _wlan_on_off(names, activate):
+    # the default fall if names was empty
+    if not names:
+        names = ['1','2'] if activate else ["all"]  #TODO: hard coded values :(
     wlan_nums, unknown_names = [], []
     for wlan_name in names:
         try:
@@ -277,19 +280,17 @@ def _wlan_on_off(names, activate):
             f"unknown wlan name{'s' if len(unknown_names) > 1 else ''}: "
             f"{', '.join(unknown_names)}"
         )
-
     for wlan_num in set(wlan_nums):
         _call(
             service_name=f"WLANConfiguration{wlan_num}",
             action_name="SetEnable",
             arguments={"NewEnable": activate},
         )
-        click.echo(wlan_num)
 
 
 @wlan.command(name="list")
 def wlan_list():
-    """List all wifis and their stats"""
+    """List all wi-fis and their stats"""
     for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
         try:
             res = _call(
@@ -307,7 +308,7 @@ def wlan_list():
 
 @wlan.command(name="devices")
 def wlan_listdevice():
-    """List all wifi connected devices."""
+    """List all wi-fi connected devices."""
     for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
         try:
             res = _call(
@@ -336,3 +337,4 @@ def wlan_listdevice():
 
 if __name__ == "__main__":
     fritz()
+
