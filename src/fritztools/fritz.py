@@ -13,8 +13,8 @@ __version__ = "0.1.dev.wifi"
 
 class __Consts:
     WIFI_NAMES = {
-        1: "2.4 GHz",
-        2: "5 GHz",
+        1: "2.4GHz",
+        2: "5GHz",
         3: "guests",
     }
 
@@ -23,6 +23,19 @@ class __Consts:
         "5000": "5GHz",
         "6000": "6GHz",
         "unknown": "-",
+    }
+
+    WIFI_NAMES_TO_CONNECTION_NUMBERS = {
+        "1": [1],
+        "2": [2],
+        "3": [3],
+        "2.4": [1],
+        "2.4GHz": [1],
+        "5": [2],
+        "5GHz": [2],
+        "guests": [3],
+        "guest": [3],
+        "all": [1, 2, 3],
     }
 
 
@@ -202,6 +215,7 @@ def port_list():
 @click.option("--newip", "insistent", is_flag=True, default=False)
 def reconnect(insistent=False, attempts=5, attempt_delay=5):
     """Terminates the FritzBox connection."""
+
     if not insistent:
         _terminate()
     else:
@@ -225,6 +239,52 @@ def reconnect(insistent=False, attempts=5, attempt_delay=5):
 def myip():
     """Shows the current IP address."""
     click.echo(_get_myip())
+
+
+def __split_commas_in_params_callback(ctx, param, values):
+    # get rid of possible commas
+    params = []
+    for maybe_with_comma in values:
+        param = maybe_with_comma.split(",")
+        params.extend(param)
+    return params
+
+
+@wlan.command(name="on")
+@click.argument("wlans", nargs=-1, callback=__split_commas_in_params_callback)
+def wlan_on(wlans):
+    """Turns on wi-fi connections."""
+    _wlan_on_off(names=wlans, activate=True)
+
+
+@wlan.command(name="off")
+@click.argument("wlans", nargs=-1, callback=__split_commas_in_params_callback)
+def wlan_off(wlans):
+    """Turns off wi-fi connections."""
+    _wlan_on_off(names=wlans, activate=False)
+
+
+def _wlan_on_off(names, activate):
+    wlan_nums, unknown_names = [], []
+    for wlan_name in names:
+        try:
+            wlan_nums.extend(__Consts.WIFI_NAMES_TO_CONNECTION_NUMBERS[wlan_name])
+        except KeyError:
+            if wlan_name:
+                unknown_names.append(wlan_name)
+    if unknown_names:
+        click.echo(
+            f"unknown wlan name{'s' if len(unknown_names) > 1 else ''}: "
+            f"{', '.join(unknown_names)}"
+        )
+
+    for wlan_num in set(wlan_nums):
+        _call(
+            service_name=f"WLANConfiguration{wlan_num}",
+            action_name="SetEnable",
+            arguments={"NewEnable": activate},
+        )
+        click.echo(wlan_num)
 
 
 @wlan.command(name="list")
