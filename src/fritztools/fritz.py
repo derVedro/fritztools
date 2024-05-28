@@ -8,7 +8,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 
-__version__ = "0.2.dev"
+__version__ = "0.2.dev.speedmeter"
 
 
 class __Consts:
@@ -333,6 +333,34 @@ def wlan_listdevice():
                 # print(*res.items(), sep="\n")
         except FritzServiceError:
             break
+
+
+@fritz.command(name="speedmeter")
+def speedmeter():
+    import time
+    abort = False
+    while not abort:
+        res = _call(
+            service_name="WANCommonInterfaceConfig",
+            action_name="X_AVM-DE_GetOnlineMonitor",
+            arguments={"NewSyncGroupIndex": 0},
+        )
+
+        out = {
+            "max_upload": res["Newmax_us"],
+            "max_download": res["Newmax_ds"],
+            "current_upload": int(res["Newus_current_bps"].split(",")[0]),
+            "current_download": int(res["Newds_current_bps"].split(",")[0]),
+        }
+
+        print(
+            f"""
+    UP:   utilisation: {out["current_upload"] / out["max_upload"]:.3f}   {out["current_upload"]} / {out["max_upload"]}
+    DOWN: utilisation: {out["current_download"] / out["max_download"]:.3f}   {out["current_download"]} / {out["max_download"]}        
+        """
+        )
+
+        time.sleep(1)
 
 
 if __name__ == "__main__":
