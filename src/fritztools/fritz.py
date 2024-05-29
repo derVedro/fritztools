@@ -336,8 +336,10 @@ def wlan_listdevice():
 
 
 @fritz.command(name="speedmeter")
-def speedmeter():
+@click.option("--once", is_flag=True)
+def speedmeter(once=False):
     import time
+
     abort = False
     while not abort:
         res = _call(
@@ -355,12 +357,14 @@ def speedmeter():
 
         print(
             f"""
-    UP:   utilisation: {out["current_upload"] / out["max_upload"]:.3f}   {out["current_upload"]} / {out["max_upload"]}
-    DOWN: utilisation: {out["current_download"] / out["max_download"]:.3f}   {out["current_download"]} / {out["max_download"]}        
+    UP:   utilisation: {(out["current_upload"] / out["max_upload"]) if out["max_upload"] != 0 else 0 :.3f}   {out["current_upload"]} / {out["max_upload"]}
+    DOWN: utilisation: {(out["current_download"] / out["max_download"]) if out["max_download"] !=0 else 0:.3f}   {out["current_download"]} / {out["max_download"]}        
         """
         )
-
-        time.sleep(1)
+        if not once:
+            time.sleep(1)
+        else:
+            abort = True
 
 
 if __name__ == "__main__":
