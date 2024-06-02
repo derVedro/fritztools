@@ -330,7 +330,6 @@ def wlan_listdevice():
                     f" {res["NewX_AVM-DE_SignalStrength"]}"
                 )
 
-                # print(*res.items(), sep="\n")
         except FritzServiceError:
             break
 
@@ -340,8 +339,7 @@ def wlan_listdevice():
 def speedmeter(once=False):
     import time
 
-    abort = False
-    while not abort:
+    def _wa():
         res = _call(
             service_name="WANCommonInterfaceConfig",
             action_name="X_AVM-DE_GetOnlineMonitor",
@@ -351,15 +349,23 @@ def speedmeter(once=False):
         out = {
             "max_upload": res["Newmax_us"],
             "max_download": res["Newmax_ds"],
-            "current_upload": int(res["Newus_current_bps"].split(",")[0]),
-            "current_download": int(res["Newds_current_bps"].split(",")[0]),
+            "last_uploads": list(map(int, res["Newus_current_bps"].split(","))),
+            "last_downloads": list(map(int, res["Newds_current_bps"].split(",")[0])),
         }
+        return out
 
-        print(
-            f"""
-    UP:   utilisation: {(out["current_upload"] / out["max_upload"]) if out["max_upload"] != 0 else 0 :.3f}   {out["current_upload"]} / {out["max_upload"]}
-    DOWN: utilisation: {(out["current_download"] / out["max_download"]) if out["max_download"] !=0 else 0:.3f}   {out["current_download"]} / {out["max_download"]}        
-        """
+    def upline(n=1):
+        return "\033[F" * n
+
+    abort = False
+    click.echo("\n")
+
+    while not abort:
+        out = _wa()
+
+        click.echo(
+            f"""{upline(2)}UP:   utilisation: {(out["last_uploads"][0]   / out["max_upload"])   if out["max_upload"]   !=0 else 0:.3f}   {out["last_uploads"][0]}   / {out["max_upload"]}\n"""
+            f"""DOWN: utilisation: {(out["last_downloads"][0] / out["max_download"]) if out["max_download"] !=0 else 0:.3f}   {out["last_downloads"][0]} / {out["max_download"]}"""
         )
         if not once:
             time.sleep(1)
