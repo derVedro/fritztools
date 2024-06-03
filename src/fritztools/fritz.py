@@ -337,6 +337,7 @@ def wlan_listdevice():
 @fritz.command(name="speedmeter")
 @click.option("--once", is_flag=True)
 def speedmeter(once=False):
+    """Monitor up and downlink speed and utilisation."""
     import time
 
     def _wa():
