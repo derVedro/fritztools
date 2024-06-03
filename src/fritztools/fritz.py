@@ -8,7 +8,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 
-__version__ = "0.2.dev.speedmeter"
+__version__ = "0.2.dev"
 
 
 class __Consts:
@@ -372,6 +372,25 @@ def speedmeter(once=False):
             time.sleep(1)
         else:
             abort = True
+
+
+@fritz.command()
+@click.option("-l", "--lastlines", default=10)
+def log(lastlines):
+    """"Get the log from the FritzBox"""
+    res = _call(service_name="DeviceInfo", action_name="GetDeviceLog")
+
+    log_lines = res["NewDeviceLog"].split("\n")
+
+    if lastlines < len(log_lines):
+        log_lines = log_lines[:lastlines]
+
+    import os
+    out_str = os.linesep.join(
+        click.style(text=line[:17], fg="gren") + line[17:] for line in log_lines
+    )
+
+    click.echo(out_str)
 
 
 if __name__ == "__main__":
