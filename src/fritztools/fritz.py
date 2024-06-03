@@ -338,6 +338,7 @@ def wlan_listdevice():
 @fritz.command()
 @click.option("-l", "--lastlines", default=10)
 def log(lastlines):
+    """"Get the log from the FritzBox"""
     res = _call(service_name="DeviceInfo", action_name="GetDeviceLog")
 
     log_lines = res["NewDeviceLog"].split("\n")
