@@ -298,9 +298,9 @@ def wlan_list():
             )
             click.echo(
                 f" {wlan_name:>12}"
-                f" [{"X" if res["NewStatus"] == "Up" else " "}] "
-                f" {res["NewSSID"]:<15.15} {res["NewChannel"]:4} "
-                f"  {__Consts.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]:>6}"
+                f" [{'X' if res['NewStatus'] == 'Up' else ' '}] "
+                f" {res['NewSSID']:<15.15} {res['NewChannel']:4} "
+                f"  {__Consts.FREQ_STR[res['NewX_AVM-DE_FrequencyBand']]:>6}"
             )
         except FritzServiceError:
             break
@@ -323,11 +323,11 @@ def wlan_listdevice():
                 )
 
                 click.echo(
-                    f" {_get_hostname(res["NewAssociatedDeviceMACAddress"]):>12} "
-                    f" {res["NewAssociatedDeviceMACAddress"]} "
-                    f" {res["NewAssociatedDeviceIPAddress"]} "
-                    f" {res["NewX_AVM-DE_Speed"]} "
-                    f" {res["NewX_AVM-DE_SignalStrength"]}"
+                    f" {_get_hostname(res['NewAssociatedDeviceMACAddress']):>12} "
+                    f" {res['NewAssociatedDeviceMACAddress']} "
+                    f" {res['NewAssociatedDeviceIPAddress']} "
+                    f" {res['NewX_AVM-DE_Speed']} "
+                    f" {res['NewX_AVM-DE_SignalStrength']}"
                 )
 
         except FritzServiceError:
