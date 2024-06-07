@@ -7,33 +7,27 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
     FritzServiceError,
 )
+from clickhelpers import OrderedGroup, split_params_commas_callback
 from outputhelpers import tabello, upline, heighlight, active_mark
 from consts import WIFI
 
 __version__ = "0.3.dev"
 
 
-class __OrderedGroup(click.Group):
-    def list_commands(self, ctx):
-        return self.commands
-
-
-@click.group(
-    cls=__OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]}
-)
+@click.group(cls=OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__)
 def fritz():
     """Collection of some useful commands for the FritzBox"""
     pass
 
 
-@fritz.group(cls=__OrderedGroup)
+@fritz.group(cls=OrderedGroup)
 def port():
     """Do port forwarding"""
     pass
 
 
-@fritz.group(cls=__OrderedGroup)
+@fritz.group(cls=OrderedGroup)
 def wlan():
     """Do wi-fi stuff"""
     pass
@@ -189,9 +183,7 @@ def port_list():
         for pm in _get_portmapping()
     ]
     if t_data:
-        click.echo(
-            tabello(headers=t_header, data=t_data, aligns="^<<<<", delimiter=" ")
-        )
+        click.echo(tabello(headers=t_header, data=t_data, aligns="^<<<<"))
     else:
         click.echo("no port mappings found")
 
@@ -226,24 +218,15 @@ def myip():
     click.echo(_get_myip())
 
 
-def __split_params_commas_callback(ctx, param, values):
-    # get rid of possible commas
-    params = []
-    for maybe_with_comma in values:
-        param = maybe_with_comma.split(",")
-        params.extend(param)
-    return params
-
-
 @wlan.command(name="on")
-@click.argument("wlans", nargs=-1, callback=__split_params_commas_callback)
+@click.argument("wlans", nargs=-1, callback=split_params_commas_callback)
 def wlan_on(wlans):
     """Turn on wi-fi network."""
     _wlan_on_off(names=wlans, activate=True)
 
 
 @wlan.command(name="off")
-@click.argument("wlans", nargs=-1, callback=__split_params_commas_callback)
+@click.argument("wlans", nargs=-1, callback=split_params_commas_callback)
 def wlan_off(wlans):
     """Turn off wi-fi network."""
     _wlan_on_off(names=wlans, activate=False)
@@ -294,7 +277,7 @@ def wlan_list():
             )
         except FritzServiceError:
             break
-    click.echo(tabello(data=t_data, headers=t_headers, delimiter=" "))
+    click.echo(tabello(data=t_data, headers=t_headers))
 
 
 @wlan.command(name="devices")
@@ -326,7 +309,7 @@ def wlan_listdevice():
 
         except FritzServiceError:
             break
-    click.echo(tabello(data=t_data, headers=t_headers, delimiter="  "))
+    click.echo(tabello(data=t_data, headers=t_headers))
 
 
 def _get_online_monitor():
@@ -369,9 +352,9 @@ def speedmeter(once=False):
             ],
         ]
 
-        table = tabello(data=t_data, headers=t_headers, delimiter="  ", aligns=">")
+        table = tabello(data=t_data, headers=t_headers, aligns=">")
         table_lines = len(table.splitlines())
-        click.echo(table + upline(table_lines + 1))
+        click.echo(table + upline(table_lines))
 
         if not once:
             time.sleep(1)

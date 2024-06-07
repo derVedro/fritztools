@@ -1,23 +1,28 @@
 """
-adhoc Tabellen, dirty
+Helpers for text output, tables, etc.
 """
+
 import os
 import click
+
 
 def mask(something):
     return click.style(text=something, fg="black", bg="blue")
 
+
 def heighlight(something):
     return click.style(text=something, fg="green")
 
+
 def active_mark(flag=True):
     return "[x]" if flag else "[ ]"
+
 
 def tabello(
     data: list[list],
     headers: list = None,
     aligns: list = None,
-    delimiter: str = " | ",
+    delimiter: str = "  ",
     border: str = " ",
     line_after_header=False,
 ) -> str:
@@ -39,11 +44,7 @@ def tabello(
     max_lengths = [0] * len(data[0])
     for row in [headers] + data:
         for idx, item in enumerate(row):
-            max_lengths[idx] = (
-                len(str(item))
-                if len(str(item)) > max_lengths[idx]
-                else max_lengths[idx]
-            )
+            max_lengths[idx] = max(max_lengths[idx], len(str(item)))
 
     def build_row(row):
         return (
@@ -64,8 +65,7 @@ def tabello(
         )
         out += "-" * line_lengths + os.linesep
 
-    for row in data:
-        out += build_row(row) + os.linesep
+    out += os.linesep.join([build_row(row) for row in data])
 
     return out
 
