@@ -72,3 +72,14 @@ def tabello(
 
 def upline(n=1):
     return "\033[F" * n
+
+
+def charbar(value, max_value, min_value=0):
+    if max_value == 0:
+        return "X"
+    import math
+
+    scale = " _▂▃▅▇█"  # no unicode " _▄█"
+    ratio = value / (max_value - min_value)
+    pos = min(math.floor(ratio * len(scale)), len(scale) - 1)
+    return scale[pos]

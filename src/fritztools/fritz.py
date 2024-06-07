@@ -1,4 +1,6 @@
-"""Collection of some useful commands for the FritzBox"""
+"""
+Collection of some useful commands for the FritzBox
+"""
 
 import click
 from fritzconnection import FritzConnection
@@ -8,7 +10,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 from clickhelpers import OrderedGroup, split_params_commas_callback
-from outputhelpers import tabello, upline, heighlight, active_mark
+from outputhelpers import tabello, upline, heighlight, active_mark, charbar
 from consts import WIFI
 
 __version__ = "0.3.dev"
@@ -323,7 +325,7 @@ def _get_online_monitor():
         "max_upload": res["Newmax_us"],
         "max_download": res["Newmax_ds"],
         "last_uploads": list(map(int, res["Newus_current_bps"].split(","))),
-        "last_downloads": list(map(int, res["Newds_current_bps"].split(",")[0])),
+        "last_downloads": list(map(int, res["Newds_current_bps"].split(","))),
     }
 
 
@@ -333,7 +335,7 @@ def speedmeter(once=False):
     """Monitor up and downlink speed and utilisation."""
     import time
 
-    t_headers = ["LINK", "CURRENT", "MAX", "UTILIZATION"]
+    t_headers = ["LINK", "CURRENT", "MAX", "UTILIZATION", "HISTORY"]
     abort = False
     while not abort:
         out = _get_online_monitor()
@@ -343,12 +345,15 @@ def speedmeter(once=False):
                 f'{out["last_uploads"][0]}',
                 f'{out["max_upload"]}',
                 f'{(out["last_uploads"][0] / out["max_upload"]) if out["max_upload"] != 0 else 0:.3f}',
+                "".join([charbar(val, out["max_upload"]) for val in out["last_uploads"]]),
             ],
             [
                 "DOWN",
                 f'{out["last_downloads"][0]}',
                 f'{out["max_download"]}',
                 f'{(out["last_downloads"][0] / out["max_download"]) if out["max_download"] != 0 else 0:.3f}',
+                "".join([charbar(val, out["max_download"]) for val in
+                         out["last_downloads"]]),
             ],
         ]
 
