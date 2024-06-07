@@ -7,6 +7,7 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
     FritzServiceError,
 )
+from outputhelpers import tabello, upline
 
 __version__ = "0.3.dev"
 
@@ -117,6 +118,14 @@ def _get_hostname(mac_address=None):
         arguments={"NewMACAddress": mac_address},
     )["NewHostName"]
 
+    # a = _call(
+    #     service_name="Hosts1",
+    #     action_name="GetSpecificHostEntry",
+    #     arguments={"NewMACAddress": mac_address},
+    # )
+    # pass
+    # return a["NewHostName"]
+
 
 def _get_portmapping():
     mappings_amount = _call(
@@ -202,13 +211,21 @@ def port_close(port, protocol, name):
 @port.command(name="list")
 def port_list():
     """Lists all port forwardings."""
-    for pm in _get_portmapping():
-        click.echo(
-            f' [{"X" if pm["NewEnabled"] else " "}] '
-            f'{pm["NewPortMappingDescription"]:<15.15} {pm["NewProtocol"]} '
-            f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]} -> '
-            f'{pm["NewInternalClient"]}:{pm["NewInternalPort"]}'
-        )
+
+    t_header = ["active ", "description", "protocol", "from", "to"]
+
+    t_data = [
+        [
+            f'[{"X" if pm["NewEnabled"] else " "}]',
+            f'{pm["NewPortMappingDescription"]}',  #:<15.15},'
+            f'{pm["NewProtocol"]}',
+            f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]}',
+            f'{pm["NewInternalClient"]}:{pm["NewInternalPort"]}',
+        ]
+        for pm in _get_portmapping()
+    ]
+
+    click.echo(tabello(headers=t_header, data=t_data, aligns="^<<<<", delimiter=" "))
 
 
 @fritz.command()
@@ -291,24 +308,37 @@ def _wlan_on_off(names, activate):
 @wlan.command(name="list")
 def wlan_list():
     """List all wi-fis and their stats"""
+
+    t_data = []
     for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
         try:
             res = _call(
                 service_name=f"WLANConfiguration{wlan_number}", action_name="GetInfo"
             )
-            click.echo(
-                f" {wlan_name:>12}"
-                f" [{"X" if res["NewStatus"] == "Up" else " "}] "
-                f" {res["NewSSID"]:<15.15} {res["NewChannel"]:4} "
-                f"  {__Consts.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]:>6}"
+            t_data.append(
+                [
+                    f"{wlan_name}",
+                    f'[{"X" if res["NewStatus"] == "Up" else " "}]',
+                    f'{res["NewSSID"]}',
+                    f'{res["NewChannel"]:4}',
+                    f'{__Consts.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]}',
+                ]
             )
         except FritzServiceError:
             break
+    click.echo(
+        tabello(
+            data=t_data,
+            headers=["network", "active", "SSID", "channel", "freq"],
+            delimiter=" ",
+        )
+    )
 
 
 @wlan.command(name="devices")
 def wlan_listdevice():
     """List all wi-fi connected devices."""
+    t_data = []
     for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
         try:
             res = _call(
@@ -321,17 +351,40 @@ def wlan_listdevice():
                     action_name="GetGenericAssociatedDeviceInfo",
                     arguments={"NewAssociatedDeviceIndex": i},
                 )
-
-                click.echo(
-                    f" {_get_hostname(res["NewAssociatedDeviceMACAddress"]):>12} "
-                    f" {res["NewAssociatedDeviceMACAddress"]} "
-                    f" {res["NewAssociatedDeviceIPAddress"]} "
-                    f" {res["NewX_AVM-DE_Speed"]} "
-                    f" {res["NewX_AVM-DE_SignalStrength"]}"
+                t_data.append(
+                    [
+                        f'{_get_hostname(res["NewAssociatedDeviceMACAddress"])}',
+                        f'{res["NewAssociatedDeviceMACAddress"]}',
+                        f'{res["NewAssociatedDeviceIPAddress"]}',
+                        f'{res["NewX_AVM-DE_Speed"]}',
+                        f'{res["NewX_AVM-DE_SignalStrength"]}',
+                    ]
                 )
 
         except FritzServiceError:
             break
+    click.echo(
+        tabello(
+            data=t_data,
+            headers=["HOSTNAME", "MAC ADRESS", "IP ADRESS", "SPEED", "SIGNAL"],
+            delimiter="  ",
+        )
+    )
+
+
+def _get_online_monitor():
+    res = _call(
+        service_name="WANCommonInterfaceConfig",
+        action_name="X_AVM-DE_GetOnlineMonitor",
+        arguments={"NewSyncGroupIndex": 0},
+    )
+
+    return {
+        "max_upload": res["Newmax_us"],
+        "max_download": res["Newmax_ds"],
+        "last_uploads": list(map(int, res["Newus_current_bps"].split(","))),
+        "last_downloads": list(map(int, res["Newds_current_bps"].split(",")[0])),
+    }
 
 
 @fritz.command(name="speedmeter")
@@ -340,34 +393,33 @@ def speedmeter(once=False):
     """Monitor up and downlink speed and utilisation."""
     import time
 
-    def _wa():
-        res = _call(
-            service_name="WANCommonInterfaceConfig",
-            action_name="X_AVM-DE_GetOnlineMonitor",
-            arguments={"NewSyncGroupIndex": 0},
-        )
-
-        out = {
-            "max_upload": res["Newmax_us"],
-            "max_download": res["Newmax_ds"],
-            "last_uploads": list(map(int, res["Newus_current_bps"].split(","))),
-            "last_downloads": list(map(int, res["Newds_current_bps"].split(",")[0])),
-        }
-        return out
-
-    def upline(n=1):
-        return "\033[F" * n
-
     abort = False
-    click.echo("\n")
-
     while not abort:
-        out = _wa()
+        out = _get_online_monitor()
+        t_data = [
+            [
+                "UP",
+                f'{out["last_uploads"][0]}',
+                f'{out["max_upload"]}',
+                f'{(out["last_uploads"][0] / out["max_upload"]) if out["max_upload"] != 0 else 0:.3f}',
+            ],
+            [
+                "DOWN",
+                f'{out["last_downloads"][0]}',
+                f'{out["max_download"]}',
+                f'{(out["last_downloads"][0] / out["max_download"]) if out["max_download"] != 0 else 0:.3f}',
+            ],
+        ]
 
-        click.echo(
-            f"""{upline(2)}UP:   utilisation: {(out["last_uploads"][0]   / out["max_upload"])   if out["max_upload"]   !=0 else 0:.3f}   {out["last_uploads"][0]}   / {out["max_upload"]}\n"""
-            f"""DOWN: utilisation: {(out["last_downloads"][0] / out["max_download"]) if out["max_download"] !=0 else 0:.3f}   {out["last_downloads"][0]} / {out["max_download"]}"""
+        table = tabello(
+            data=t_data,
+            headers=["LINK", "CURRENT", "MAX", "UTILIZATION"],
+            delimiter="  ",
+            aligns=">",
         )
+        table_lines = len(table.splitlines())
+        click.echo(table + upline(table_lines + 1))
+
         if not once:
             time.sleep(1)
         else:
@@ -388,7 +440,7 @@ def log(lastlines):
     import os
 
     out_str = os.linesep.join(
-        click.style(text=line[:17], fg="gren") + line[17:] for line in log_lines
+        click.style(text=line[:17], fg="green") + line[17:] for line in log_lines
     )
 
     click.echo(out_str)
