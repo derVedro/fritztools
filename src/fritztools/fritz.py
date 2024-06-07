@@ -7,59 +7,27 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
     FritzServiceError,
 )
+from clickhelpers import OrderedGroup, split_params_commas_callback
+from outputhelpers import tabello, upline, heighlight, active_mark, charbar
+from consts import WIFI
 
-__version__ = "0.2"
-
-
-class __Consts:
-    WIFI_NAMES = {
-        1: "2.4GHz",
-        2: "5GHz",
-        3: "guests",
-    }
-
-    FREQ_STR = {
-        "2400": "2.4GHz",
-        "5000": "5GHz",
-        "6000": "6GHz",
-        "unknown": "-",
-    }
-
-    WIFI_NAMES_TO_CONNECTION_NUMBERS = {
-        "1": [1],
-        "2": [2],
-        "3": [3],
-        "2.4": [1],
-        "2.4GHz": [1],
-        "5": [2],
-        "5GHz": [2],
-        "guests": [3],
-        "guest": [3],
-        "all": [1, 2, 3],
-    }
+__version__ = "0.3.dev"
 
 
-class __OrderedGroup(click.Group):
-    def list_commands(self, ctx):
-        return self.commands
-
-
-@click.group(
-    cls=__OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]}
-)
+@click.group(cls=OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__)
 def fritz():
     """Collection of some useful commands for the FritzBox"""
     pass
 
 
-@fritz.group(cls=__OrderedGroup)
+@fritz.group(cls=OrderedGroup)
 def port():
     """Do port forwarding"""
     pass
 
 
-@fritz.group(cls=__OrderedGroup)
+@fritz.group(cls=OrderedGroup)
 def wlan():
     """Do wi-fi stuff"""
     pass
@@ -202,13 +170,22 @@ def port_close(port, protocol, name):
 @port.command(name="list")
 def port_list():
     """Lists all port forwardings."""
-    for pm in _get_portmapping():
-        click.echo(
-            f' [{"X" if pm["NewEnabled"] else " "}] '
-            f'{pm["NewPortMappingDescription"]:<15.15} {pm["NewProtocol"]} '
-            f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]} -> '
-            f'{pm["NewInternalClient"]}:{pm["NewInternalPort"]}'
-        )
+
+    t_header = ["ACTIVE ", "DECRIPTION", "PROTOCOL", "FROM", "TO"]
+    t_data = [
+        [
+            f'{active_mark(pm["NewEnabled"])}',
+            f'{pm["NewPortMappingDescription"]}',
+            f'{pm["NewProtocol"]}',
+            f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]}',
+            f'{pm["NewInternalClient"]}:{pm["NewInternalPort"]}',
+        ]
+        for pm in _get_portmapping()
+    ]
+    if t_data:
+        click.echo(tabello(headers=t_header, data=t_data, aligns="^<<<<"))
+    else:
+        click.echo("no port mappings found")
 
 
 @fritz.command()
@@ -241,24 +218,15 @@ def myip():
     click.echo(_get_myip())
 
 
-def __split_params_commas_callback(ctx, param, values):
-    # get rid of possible commas
-    params = []
-    for maybe_with_comma in values:
-        param = maybe_with_comma.split(",")
-        params.extend(param)
-    return params
-
-
 @wlan.command(name="on")
-@click.argument("wlans", nargs=-1, callback=__split_params_commas_callback)
+@click.argument("wlans", nargs=-1, callback=split_params_commas_callback)
 def wlan_on(wlans):
     """Turn on wi-fi network."""
     _wlan_on_off(names=wlans, activate=True)
 
 
 @wlan.command(name="off")
-@click.argument("wlans", nargs=-1, callback=__split_params_commas_callback)
+@click.argument("wlans", nargs=-1, callback=split_params_commas_callback)
 def wlan_off(wlans):
     """Turn off wi-fi network."""
     _wlan_on_off(names=wlans, activate=False)
@@ -271,7 +239,7 @@ def _wlan_on_off(names, activate):
     wlan_nums, unknown_names = [], []
     for wlan_name in names:
         try:
-            wlan_nums.extend(__Consts.WIFI_NAMES_TO_CONNECTION_NUMBERS[wlan_name])
+            wlan_nums.extend(WIFI.NAMES_TO_CONNECTION_NUMBERS[wlan_name])
         except KeyError:
             if wlan_name:
                 unknown_names.append(wlan_name)
@@ -291,25 +259,33 @@ def _wlan_on_off(names, activate):
 @wlan.command(name="list")
 def wlan_list():
     """List all wi-fis and their stats"""
-    for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
+    t_headers = ["NETWORK", "ACTIVE", "SSID", "CHANNEL", "FREQ"]
+    t_data = []
+    for wlan_number, wlan_name in WIFI.NAMES.items():
         try:
             res = _call(
                 service_name=f"WLANConfiguration{wlan_number}", action_name="GetInfo"
             )
-            click.echo(
-                f" {wlan_name:>12}"
-                f" [{"X" if res["NewStatus"] == "Up" else " "}] "
-                f" {res["NewSSID"]:<15.15} {res["NewChannel"]:4} "
-                f"  {__Consts.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]:>6}"
+            t_data.append(
+                [
+                    f"{wlan_name}",
+                    f'{active_mark(res["NewStatus"] == "Up")}',
+                    f'{res["NewSSID"]}',
+                    f'{res["NewChannel"]:4}',
+                    f'{WIFI.FREQ_STR[res.get("NewX_AVM-DE_FrequencyBand", "unknown")]}',
+                ]
             )
         except FritzServiceError:
             break
+    click.echo(tabello(data=t_data, headers=t_headers))
 
 
 @wlan.command(name="devices")
 def wlan_listdevice():
     """List all wi-fi connected devices."""
-    for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
+    t_headers = ["HOSTNAME", "MAC ADRESS", "IP ADRESS", "SPEED", "SIGNAL"]
+    t_data = []
+    for wlan_number, wlan_name in WIFI.NAMES.items():
         try:
             res = _call(
                 service_name=f"WLANConfiguration{wlan_number}",
@@ -321,18 +297,87 @@ def wlan_listdevice():
                     action_name="GetGenericAssociatedDeviceInfo",
                     arguments={"NewAssociatedDeviceIndex": i},
                 )
-
-                click.echo(
-                    f" {_get_hostname(res["NewAssociatedDeviceMACAddress"]):>12} "
-                    f" {res["NewAssociatedDeviceMACAddress"]} "
-                    f" {res["NewAssociatedDeviceIPAddress"]} "
-                    f" {res["NewX_AVM-DE_Speed"]} "
-                    f" {res["NewX_AVM-DE_SignalStrength"]}"
+                t_data.append(
+                    [
+                        f'{_get_hostname(res["NewAssociatedDeviceMACAddress"])}',
+                        f'{res["NewAssociatedDeviceMACAddress"]}',
+                        f'{res["NewAssociatedDeviceIPAddress"]}',
+                        f'{res["NewX_AVM-DE_Speed"]}',
+                        f'{res["NewX_AVM-DE_SignalStrength"]}',
+                    ]
                 )
 
         except FritzServiceError:
             break
+    click.echo(tabello(data=t_data, headers=t_headers))
+
+
+def _get_online_monitor():
+    res = _call(
+        service_name="WANCommonInterfaceConfig",
+        action_name="X_AVM-DE_GetOnlineMonitor",
+        arguments={"NewSyncGroupIndex": 0},
+    )
+
+    return {
+        "max_upload": res["Newmax_us"],
+        "max_download": res["Newmax_ds"],
+        "last_uploads": list(map(int, res["Newus_current_bps"].split(","))),
+        "last_downloads": list(map(int, res["Newds_current_bps"].split(","))),
+    }
+
+
+@fritz.command(name="speedmeter")
+@click.option("--once", is_flag=True)
+def speedmeter(once=False):
+    """Monitor up and downlink speed and utilisation."""
+    import time
+
+    t_headers = ["LINK", "CURRENT", "MAX", "UTILIZATION", "HISTORY"]
+    abort = False
+    while not abort:
+        out = _get_online_monitor()
+        t_data = [
+            [
+                "UP",
+                f'{out["last_uploads"][0]}',
+                f'{out["max_upload"]}',
+                f'{(out["last_uploads"][0] / out["max_upload"]) if out["max_upload"] != 0 else 0:.3f}',
+                "".join([charbar(val, out["max_upload"]) for val in out["last_uploads"]]),
+            ],
+            [
+                "DOWN",
+                f'{out["last_downloads"][0]}',
+                f'{out["max_download"]}',
+                f'{(out["last_downloads"][0] / out["max_download"]) if out["max_download"] != 0 else 0:.3f}',
+                "".join([charbar(val, out["max_download"]) for val in
+                         out["last_downloads"]]),
+            ],
+        ]
+
+        table = tabello(data=t_data, headers=t_headers, aligns=">")
+        table_lines = len(table.splitlines())
+        click.echo(table + upline(table_lines))
+
+        if not once:
+            time.sleep(1)
+        else:
+            abort = True
+
+
+@fritz.command()
+@click.option("-l", "--lastlines", default=10)
+def log(lastlines):
+    """Get the log from the FritzBox"""
+    import os
+
+    res = _call(service_name="DeviceInfo", action_name="GetDeviceLog")
+    log_lines = res["NewDeviceLog"].split("\n")
+    if lastlines < len(log_lines):
+        log_lines = log_lines[:lastlines]
+    click.echo(os.linesep.join(heighlight(line[:17]) + line[17:] for line in log_lines))
 
 
 if __name__ == "__main__":
     fritz()
+

@@ -7,6 +7,8 @@ fritztools is a small collection of CLI-goodies for your FritzBox
 * turn on/off FritzBox wi-fi, list connected devices
 * show public IP address
 * reconnect
+* monitor up and downlink
+* get FritzBox log
 
 ## Install
 Clone the repo, then:
