@@ -177,20 +177,23 @@ def port_close(port, protocol, name):
 def port_list():
     """Lists all port forwardings."""
 
-    t_header = ["active ", "description", "protocol", "from", "to"]
-
+    t_header = ["ACTIVE ", "DECRIPTION", "PROTOCOL", "FROM", "TO"]
     t_data = [
         [
             f'{active_mark(pm["NewEnabled"])}',
-            f'{pm["NewPortMappingDescription"]}',  #:<15.15},'
+            f'{pm["NewPortMappingDescription"]}',
             f'{pm["NewProtocol"]}',
             f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]}',
             f'{pm["NewInternalClient"]}:{pm["NewInternalPort"]}',
         ]
         for pm in _get_portmapping()
     ]
-
-    click.echo(tabello(headers=t_header, data=t_data, aligns="^<<<<", delimiter=" "))
+    if t_data:
+        click.echo(
+            tabello(headers=t_header, data=t_data, aligns="^<<<<", delimiter=" ")
+        )
+    else:
+        click.echo("no port mappings found")
 
 
 @fritz.command()
@@ -273,7 +276,7 @@ def _wlan_on_off(names, activate):
 @wlan.command(name="list")
 def wlan_list():
     """List all wi-fis and their stats"""
-
+    t_headers = ["NETWORK", "ACTIVE", "SSID", "CHANNEL", "FREQ"]
     t_data = []
     for wlan_number, wlan_name in WIFI.NAMES.items():
         try:
@@ -286,23 +289,18 @@ def wlan_list():
                     f'{active_mark(res["NewStatus"] == "Up")}',
                     f'{res["NewSSID"]}',
                     f'{res["NewChannel"]:4}',
-                    f'{WIFI.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]}',
+                    f'{WIFI.FREQ_STR[res.get("NewX_AVM-DE_FrequencyBand", "unknown")]}',
                 ]
             )
         except FritzServiceError:
             break
-    click.echo(
-        tabello(
-            data=t_data,
-            headers=["NETWORK", "ACTIVE", "SSID", "CHANNEL", "FREQ"],
-            delimiter=" ",
-        )
-    )
+    click.echo(tabello(data=t_data, headers=t_headers, delimiter=" "))
 
 
 @wlan.command(name="devices")
 def wlan_listdevice():
     """List all wi-fi connected devices."""
+    t_headers = ["HOSTNAME", "MAC ADRESS", "IP ADRESS", "SPEED", "SIGNAL"]
     t_data = []
     for wlan_number, wlan_name in WIFI.NAMES.items():
         try:
@@ -328,13 +326,7 @@ def wlan_listdevice():
 
         except FritzServiceError:
             break
-    click.echo(
-        tabello(
-            data=t_data,
-            headers=["HOSTNAME", "MAC ADRESS", "IP ADRESS", "SPEED", "SIGNAL"],
-            delimiter="  ",
-        )
-    )
+    click.echo(tabello(data=t_data, headers=t_headers, delimiter="  "))
 
 
 def _get_online_monitor():
@@ -358,6 +350,7 @@ def speedmeter(once=False):
     """Monitor up and downlink speed and utilisation."""
     import time
 
+    t_headers = ["LINK", "CURRENT", "MAX", "UTILIZATION"]
     abort = False
     while not abort:
         out = _get_online_monitor()
@@ -376,12 +369,7 @@ def speedmeter(once=False):
             ],
         ]
 
-        table = tabello(
-            data=t_data,
-            headers=["LINK", "CURRENT", "MAX", "UTILIZATION"],
-            delimiter="  ",
-            aligns=">",
-        )
+        table = tabello(data=t_data, headers=t_headers, delimiter="  ", aligns=">")
         table_lines = len(table.splitlines())
         click.echo(table + upline(table_lines + 1))
 
