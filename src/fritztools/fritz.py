@@ -7,37 +7,10 @@ from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
     FritzServiceError,
 )
-from outputhelpers import tabello, upline
+from outputhelpers import tabello, upline, heighlight, active_mark
+from consts import WIFI
 
 __version__ = "0.3.dev"
-
-
-class __Consts:
-    WIFI_NAMES = {
-        1: "2.4GHz",
-        2: "5GHz",
-        3: "guests",
-    }
-
-    FREQ_STR = {
-        "2400": "2.4GHz",
-        "5000": "5GHz",
-        "6000": "6GHz",
-        "unknown": "-",
-    }
-
-    WIFI_NAMES_TO_CONNECTION_NUMBERS = {
-        "1": [1],
-        "2": [2],
-        "3": [3],
-        "2.4": [1],
-        "2.4GHz": [1],
-        "5": [2],
-        "5GHz": [2],
-        "guests": [3],
-        "guest": [3],
-        "all": [1, 2, 3],
-    }
 
 
 class __OrderedGroup(click.Group):
@@ -117,14 +90,6 @@ def _get_hostname(mac_address=None):
         action_name="GetSpecificHostEntry",
         arguments={"NewMACAddress": mac_address},
     )["NewHostName"]
-
-    # a = _call(
-    #     service_name="Hosts1",
-    #     action_name="GetSpecificHostEntry",
-    #     arguments={"NewMACAddress": mac_address},
-    # )
-    # pass
-    # return a["NewHostName"]
 
 
 def _get_portmapping():
@@ -216,7 +181,7 @@ def port_list():
 
     t_data = [
         [
-            f'[{"X" if pm["NewEnabled"] else " "}]',
+            f'{active_mark(pm["NewEnabled"])}',
             f'{pm["NewPortMappingDescription"]}',  #:<15.15},'
             f'{pm["NewProtocol"]}',
             f'{pm["NewRemoteHost"]}:{pm["NewExternalPort"]}',
@@ -288,7 +253,7 @@ def _wlan_on_off(names, activate):
     wlan_nums, unknown_names = [], []
     for wlan_name in names:
         try:
-            wlan_nums.extend(__Consts.WIFI_NAMES_TO_CONNECTION_NUMBERS[wlan_name])
+            wlan_nums.extend(WIFI.NAMES_TO_CONNECTION_NUMBERS[wlan_name])
         except KeyError:
             if wlan_name:
                 unknown_names.append(wlan_name)
@@ -310,7 +275,7 @@ def wlan_list():
     """List all wi-fis and their stats"""
 
     t_data = []
-    for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
+    for wlan_number, wlan_name in WIFI.NAMES.items():
         try:
             res = _call(
                 service_name=f"WLANConfiguration{wlan_number}", action_name="GetInfo"
@@ -318,10 +283,10 @@ def wlan_list():
             t_data.append(
                 [
                     f"{wlan_name}",
-                    f'[{"X" if res["NewStatus"] == "Up" else " "}]',
+                    f'{active_mark(res["NewStatus"] == "Up")}',
                     f'{res["NewSSID"]}',
                     f'{res["NewChannel"]:4}',
-                    f'{__Consts.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]}',
+                    f'{WIFI.FREQ_STR[res["NewX_AVM-DE_FrequencyBand"]]}',
                 ]
             )
         except FritzServiceError:
@@ -329,7 +294,7 @@ def wlan_list():
     click.echo(
         tabello(
             data=t_data,
-            headers=["network", "active", "SSID", "channel", "freq"],
+            headers=["NETWORK", "ACTIVE", "SSID", "CHANNEL", "FREQ"],
             delimiter=" ",
         )
     )
@@ -339,7 +304,7 @@ def wlan_list():
 def wlan_listdevice():
     """List all wi-fi connected devices."""
     t_data = []
-    for wlan_number, wlan_name in __Consts.WIFI_NAMES.items():
+    for wlan_number, wlan_name in WIFI.NAMES.items():
         try:
             res = _call(
                 service_name=f"WLANConfiguration{wlan_number}",
@@ -430,20 +395,13 @@ def speedmeter(once=False):
 @click.option("-l", "--lastlines", default=10)
 def log(lastlines):
     """Get the log from the FritzBox"""
-    res = _call(service_name="DeviceInfo", action_name="GetDeviceLog")
-
-    log_lines = res["NewDeviceLog"].split("\n")
-
-    if lastlines < len(log_lines):
-        log_lines = log_lines[:lastlines]
-
     import os
 
-    out_str = os.linesep.join(
-        click.style(text=line[:17], fg="green") + line[17:] for line in log_lines
-    )
-
-    click.echo(out_str)
+    res = _call(service_name="DeviceInfo", action_name="GetDeviceLog")
+    log_lines = res["NewDeviceLog"].split("\n")
+    if lastlines < len(log_lines):
+        log_lines = log_lines[:lastlines]
+    click.echo(os.linesep.join(heighlight(line[:17]) + line[17:] for line in log_lines))
 
 
 if __name__ == "__main__":

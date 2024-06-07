@@ -7,6 +7,11 @@ import click
 def mask(something):
     return click.style(text=something, fg="black", bg="blue")
 
+def heighlight(something):
+    return click.style(text=something, fg="green")
+
+def active_mark(flag=True):
+    return "[x]" if flag else "[ ]"
 
 def tabello(
     data: list[list],
