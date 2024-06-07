@@ -11,7 +11,7 @@ from clickhelpers import OrderedGroup, split_params_commas_callback
 from outputhelpers import tabello, upline, heighlight, active_mark, charbar
 from consts import WIFI
 
-__version__ = "0.3.dev"
+__version__ = "0.3"
 
 
 @click.group(cls=OrderedGroup, context_settings={"help_option_names": ["-h", "--help"]})
@@ -343,15 +343,18 @@ def speedmeter(once=False):
                 f'{out["last_uploads"][0]}',
                 f'{out["max_upload"]}',
                 f'{(out["last_uploads"][0] / out["max_upload"]) if out["max_upload"] != 0 else 0:.3f}',
-                "".join([charbar(val, out["max_upload"]) for val in out["last_uploads"]]),
+                "".join(
+                    [charbar(val, out["max_upload"]) for val in out["last_uploads"]]
+                ),
             ],
             [
                 "DOWN",
                 f'{out["last_downloads"][0]}',
                 f'{out["max_download"]}',
                 f'{(out["last_downloads"][0] / out["max_download"]) if out["max_download"] != 0 else 0:.3f}',
-                "".join([charbar(val, out["max_download"]) for val in
-                         out["last_downloads"]]),
+                "".join(
+                    [charbar(val, out["max_download"]) for val in out["last_downloads"]]
+                ),
             ],
         ]
 
@@ -380,4 +383,3 @@ def log(lastlines):
 
 if __name__ == "__main__":
     fritz()
-
