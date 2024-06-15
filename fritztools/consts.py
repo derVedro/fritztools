@@ -27,5 +27,8 @@ class WIFI:
         "5GHz": [2],
         "guests": [3],
         "guest": [3],
+        "first": [1],
+        "second": [2],
+        "third": [3],
         "all": [1, 2, 3],
     }
