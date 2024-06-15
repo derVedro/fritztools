@@ -7,7 +7,7 @@ import click
 
 
 def mask(something):
-    return click.style(text=something, fg="black", bg="blue")
+    return click.style(text=something, fg="white", bg="blue")
 
 
 def heighlight(something):
