@@ -281,6 +281,33 @@ def wlan_list():
     click.echo(tabello(data=t_data, headers=t_headers))
 
 
+@wlan.command(name="qr")
+@click.argument("wlan")
+def wlan_qr(wlan):
+    """Print the credentials of given wi-fi network as QR code."""
+    wlan_number = WIFI.NAMES_TO_CONNECTION_NUMBERS.get(wlan, None)
+    if not wlan_number:
+        click.echo("unknown wlan name")
+        exit(-1)
+
+    service = f"WLANConfiguration{wlan_number[0]}"  # wlan_number comes as list
+    ssid = _call(service_name=service, action_name="GetInfo")["NewSSID"]
+    passw = _call(service_name=service, action_name="GetSecurityKeys")[
+        "NewKeyPassphrase"
+    ]
+    hidden = not _call(service_name=service, action_name="GetBeaconAdvertisement")[
+        "NewBeaconAdvertisementEnabled"
+    ]
+
+    from segno.helpers import make_wifi
+    from io import StringIO
+                                                # TODO: hard coded WPA for now
+    qr = make_wifi(ssid=ssid, password=passw, hidden=hidden, security="WPA")
+    str_stream = StringIO()
+    qr.terminal(out=str_stream, border=1, compact=True)
+    click.echo(str_stream.getvalue())
+
+
 @wlan.command(name="devices")
 def wlan_listdevice():
     """List all wi-fi connected devices."""
@@ -344,15 +371,18 @@ def speedmeter(once=False):
                 f'{out["last_uploads"][0]}',
                 f'{out["max_upload"]}',
                 f'{(out["last_uploads"][0] / out["max_upload"]) if out["max_upload"] != 0 else 0:.3f}',
-                "".join([charbar(val, out["max_upload"]) for val in out["last_uploads"]]),
+                "".join(
+                    [charbar(val, out["max_upload"]) for val in out["last_uploads"]]
+                ),
             ],
             [
                 "DOWN",
                 f'{out["last_downloads"][0]}',
                 f'{out["max_download"]}',
                 f'{(out["last_downloads"][0] / out["max_download"]) if out["max_download"] != 0 else 0:.3f}',
-                "".join([charbar(val, out["max_download"]) for val in
-                         out["last_downloads"]]),
+                "".join(
+                    [charbar(val, out["max_download"]) for val in out["last_downloads"]]
+                ),
             ],
         ]
 
