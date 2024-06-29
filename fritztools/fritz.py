@@ -298,11 +298,17 @@ def wlan_qr(wlan):
     hidden = not _call(service_name=service, action_name="GetBeaconAdvertisement")[
         "NewBeaconAdvertisementEnabled"
     ]
+    beacontype = _call(service_name=service, action_name="GetInfo")["NewBeaconType"]
+    if beacontype in ["None", "OWE", "OWETrans"]:
+        security = "nopass"
+        passw = None
+    else:                   # almost nobody cares about this special value,
+        security = "WPA"    # your device handles the proper encryption for self
 
     from segno.helpers import make_wifi
     from io import StringIO
-                                                # TODO: hard coded WPA for now
-    qr = make_wifi(ssid=ssid, password=passw, hidden=hidden, security="WPA")
+
+    qr = make_wifi(ssid=ssid, password=passw, hidden=hidden, security=security)
     str_stream = StringIO()
     qr.terminal(out=str_stream, border=1, compact=True)
     click.echo(str_stream.getvalue())
