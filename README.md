@@ -4,7 +4,7 @@ fritztools is a small collection of CLI-goodies for your FritzBox
 
 ## Features
 * open, close and list ports forwardings
-* turn on/off FritzBox wi-fi, list connected devices
+* turn on/off FritzBox wi-fi, list connected devices, get credentials as QR code
 * show public IP address
 * reconnect
 * monitor up and downlink
