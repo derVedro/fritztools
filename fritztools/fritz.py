@@ -285,6 +285,14 @@ def wlan_list():
 @click.argument("wlan")
 def wlan_qr(wlan):
     """Print the credentials of given wi-fi network as QR code."""
+
+    from io import StringIO
+    try:
+        from segno.helpers import make_wifi
+    except ImportError:
+        click.echo("segno package not installed")
+        exit(-1)
+
     wlan_number = WIFI.NAMES_TO_CONNECTION_NUMBERS.get(wlan, None)
     if not wlan_number:
         click.echo("unknown wlan name")
@@ -304,9 +312,6 @@ def wlan_qr(wlan):
         passw = None
     else:                   # almost nobody cares about this special value,
         security = "WPA"    # your device handles the proper encryption for self
-
-    from segno.helpers import make_wifi
-    from io import StringIO
 
     qr = make_wifi(ssid=ssid, password=passw, hidden=hidden, security=security)
     str_stream = StringIO()
