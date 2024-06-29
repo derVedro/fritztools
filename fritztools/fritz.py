@@ -287,6 +287,7 @@ def wlan_qr(wlan):
     """Print the credentials of given wi-fi network as QR code."""
 
     from io import StringIO
+
     try:
         from segno.helpers import make_wifi
     except ImportError:
@@ -310,8 +311,9 @@ def wlan_qr(wlan):
     if beacontype in ["None", "OWE", "OWETrans"]:
         security = "nopass"
         passw = None
-    else:                   # almost nobody cares about this special value,
-        security = "WPA"    # your device handles the proper encryption for self
+    else:
+        security = "WPA"    # almost nobody cares about this special value,
+                            # your device handles the proper encryption for self
 
     qr = make_wifi(ssid=ssid, password=passw, hidden=hidden, security=security)
     str_stream = StringIO()
