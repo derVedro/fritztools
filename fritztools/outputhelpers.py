@@ -4,6 +4,7 @@ Helpers for text output, tables, etc.
 
 import os
 import click
+from typing import List
 
 
 def mask(something):
@@ -19,9 +20,9 @@ def active_mark(flag=True):
 
 
 def tabello(
-    data: list[list],
-    headers: list = None,
-    aligns: list = None,
+    data: List[list],
+    headers: List = None,
+    aligns: List = None,
     delimiter: str = "  ",
     border: str = " ",
     line_after_header=False,
