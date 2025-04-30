@@ -172,7 +172,7 @@ def port_close(port, protocol, name):
 def port_list():
     """Lists all port forwardings."""
 
-    t_header = ["ACTIVE ", "DECRIPTION", "PROTOCOL", "FROM", "TO"]
+    t_header = ["ACTIVE ", "DESCRIPTION", "PROTOCOL", "FROM", "TO"]
     t_data = [
         [
             f'{active_mark(pm["NewEnabled"])}',
