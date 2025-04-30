@@ -22,7 +22,7 @@ def active_mark(flag=True):
 def tabello(
     data: List[list],
     headers: List = None,
-    aligns: List = None,
+    aligns: List | str = None,
     delimiter: str = "  ",
     border: str = " ",
     line_after_header=False,
