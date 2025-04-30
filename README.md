@@ -11,10 +11,10 @@ fritztools is a small collection of CLI-goodies for your FritzBox
 * get FritzBox log
 
 ## Install
-Clone the repo, then:
+You can quickly install fritztools into your home directory straight from github:
 
 ```
-pip install .
+pip install --user git+https://github.com/derVedro/fritztools.git
 ```
 
 ## Usage
